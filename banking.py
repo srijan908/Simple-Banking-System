@@ -13,8 +13,24 @@ class User:
 
     def generate_pin(self):
         # completing the card number
-        while len(self.card_no) < 16:
+        check_sum = 0
+        while len(self.card_no) < 15:
             self.card_no += random.choice(User.num)
+
+        # Applying the Luhn algorithm to generate a universally valid credit card
+        for x in range(1,16):
+            if x % 2 == 1:
+                temp = 2 * int(self.card_no[x - 1])
+                if temp > 9:
+                    temp -= 9
+                check_sum += temp
+            else:
+                check_sum += int(self.card_no[x - 1])
+
+        if check_sum % 10 == 0:
+            self.card_no += '0'
+        else:
+            self.card_no += str(10-check_sum % 10)
 
         # generating the pin for the card
         while len(self.pin) < 4:
