@@ -9,7 +9,7 @@ def check_luhn(data):
         else:
             x = int(data[n]) * 2
             if x > 9:
-                total += (x / 10) + (x % 10)
+                total += int(x / 10) + (x % 10)
             else:
                 total += x
         n -= 1

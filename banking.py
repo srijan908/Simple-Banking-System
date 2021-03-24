@@ -46,15 +46,16 @@ def log_in(cur_user_card, cur_user_pin):
         user_ch = int(input("1. Balance\n2. Add income\n3. Do transfer"
                             "\n4. Close account\n5. Log out\n0. Exit\n"))
         get_con.execute('''SELECT balance FROM card WHERE number = (?)''',
-                                           (cur_user_card,))
+                        (cur_user_card,))
         cur_user_acc_bal = get_con.fetchone()
         if user_ch == 1:
-            print('Balance:', cur_user_acc_bal)
+            print('Balance:', cur_user_acc_bal[0])
         elif user_ch == 2:
-            to_add = int(print('Enter income:\n'))
+            to_add = int(input('Enter income:\n'))
             get_con.execute('''UPDATE card SET balance = balance + (?) WHERE number = (?)''',
                             (to_add, cur_user_card))
             conn.commit()
+            print("Income was added")
         elif user_ch == 3:
             print("Transfer\n")
             crd_no = input("Enter card number:\n")
@@ -67,7 +68,7 @@ def log_in(cur_user_card, cur_user_pin):
                 print("Such a card does not exist.")
                 continue
             to_transfer = int(input("Enter how much money you want to transfer:\n"))
-            if to_transfer > cur_user_acc_bal:
+            if to_transfer > cur_user_acc_bal[0]:
                 print("Not enough money!")
                 continue
             get_con.execute('''UPDATE card SET balance = balance - (?) WHERE number = (?)''',
@@ -79,6 +80,7 @@ def log_in(cur_user_card, cur_user_pin):
             print("Success!")
         elif user_ch == 4:
             get_con.execute('''DELETE FROM card WHERE number = (?)''', (cur_user_card,))
+            conn.commit()
             print("The account has been closed!")
         elif user_ch == 5:
             print("Bye!")
@@ -128,6 +130,7 @@ while True:
         found = get_con.fetchone()
         get_con.execute('''SELECT pin FROM card WHERE number = (?)''', (card_num,))
         ch_pin = get_con.fetchone()
+        ch = 0
         '''
         print('found =', found)
         print('ch_pin =', ch_pin)
@@ -139,9 +142,10 @@ while True:
             print('Card pin     =', row[2])
             print('Card balance =', row[3])
         '''
-        if found is not None and ch_pin[0] == card_pin:
-            ch = log_in(card_num, card_pin)
-        elif not found or ch_pin != card_pin:
+        if found is not None and ch_pin is not None:
+            if ch_pin[0] == card_pin:
+                ch = log_in(card_num, card_pin)
+        if found is None or ch == 0:
             print("Wrong card number or PIN")
             continue
         if found and ch == 2:
