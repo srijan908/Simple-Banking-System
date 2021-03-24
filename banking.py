@@ -1,5 +1,7 @@
 # Write your code here
 import random
+import sqlite3
+from luhn_algorithm import check_luhn
 
 
 # Class user which will store all the information of a user registered in our system
@@ -18,7 +20,7 @@ class User:
             self.card_no += random.choice(User.num)
 
         # Applying the Luhn algorithm to generate a universally valid credit card
-        for x in range(1,16):
+        for x in range(1, 16):
             if x % 2 == 1:
                 temp = 2 * int(self.card_no[x - 1])
                 if temp > 9:
@@ -38,46 +40,111 @@ class User:
 
 
 # the user interface when if the credentials are present in the database
-def log_in(cur_user):
+def log_in(cur_user_card, cur_user_pin):
     print("You have successfully logged in!")
     while True:
-        user_ch = int(input("1. Balance\n2. Log out\n0. Exit\n"))
+        user_ch = int(input("1. Balance\n2. Add income\n3. Do transfer"
+                            "\n4. Close account\n5. Log out\n0. Exit\n"))
+        get_con.execute('''SELECT balance FROM card WHERE number = (?)''',
+                                           (cur_user_card,))
+        cur_user_acc_bal = get_con.fetchone()
         if user_ch == 1:
-            print(f'Balance: {cur_user.balance}')
+            print('Balance:', cur_user_acc_bal)
         elif user_ch == 2:
-            print("You have successfully logged out")
-            return 1
+            to_add = int(print('Enter income:\n'))
+            get_con.execute('''UPDATE card SET balance = balance + (?) WHERE number = (?)''',
+                            (to_add, cur_user_card))
+            conn.commit()
+        elif user_ch == 3:
+            print("Transfer\n")
+            crd_no = input("Enter card number:\n")
+            if not check_luhn(crd_no):
+                print("Probably you made a mistake in the card number. Please try again!")
+                continue
+            get_con.execute('''SELECT balance FROM card WHERE number = (?)''', (crd_no,))
+            ex = get_con.fetchone()
+            if ex is None:
+                print("Such a card does not exist.")
+                continue
+            to_transfer = int(input("Enter how much money you want to transfer:\n"))
+            if to_transfer > cur_user_acc_bal:
+                print("Not enough money!")
+                continue
+            get_con.execute('''UPDATE card SET balance = balance - (?) WHERE number = (?)''',
+                            (to_transfer, cur_user_card))
+            conn.commit()
+            get_con.execute('''UPDATE card SET balance = balance + (?) WHERE number = (?)''',
+                            (to_transfer, crd_no))
+            conn.commit()
+            print("Success!")
+        elif user_ch == 4:
+            get_con.execute('''DELETE FROM card WHERE number = (?)''', (cur_user_card,))
+            print("The account has been closed!")
+        elif user_ch == 5:
+            print("Bye!")
+            break
         else:
             return 2
 
 
-all_users = []  # will temporarily store the all the user objects
+def manage_db(insert_user):
+    get_con.execute('''INSERT INTO card (number, pin)
+                            VALUES (?, ?);''', (insert_user.card_no, insert_user.pin))
+    conn.commit()
+
+
+# all_users = []  # will temporarily store the all the user objects
+
+# setting up the connection with the database
+conn = sqlite3.connect('card.s3db')
+conn.commit()
+
+get_con = conn.cursor()  # cursor to manage the db
+conn.commit()
+
+get_con.execute('''CREATE TABLE IF NOT EXISTS card (id INTEGER PRIMARY KEY,
+                                          number TEXT,
+                                          pin TEXT,
+                                          balance INTEGER DEFAULT 0);''')
+conn.commit()
+
 
 while True:
     choice = int(input("1. Create an account\n2. Log into account\n0. Exit\n"))
     if choice == 1:
         new_user = User()
         new_user.generate_pin()
-        print('Your car has been created')
+        print('Your card has been created')
         print(f'Your card number:\n{new_user.card_no}')
         print(f'Your card PIN:\n{new_user.pin}')
 
-        all_users.append(new_user)  # adding to the list of the users
+        # all_users.append(new_user)  # adding to the list of the users
+        manage_db(new_user)  # to save the generated user in the database
 
     elif choice == 2:
         card_num = input("Enter your card number:\n")
         card_pin = input("Enter you PIN:\n")
-        found = False
-        ch = 0
-        for cur in range(len(all_users)):
-            if all_users[cur].card_no == card_num and all_users[cur].pin == card_pin:
-                found = True
-                ch = log_in(all_users[cur])
-                break
-        if not found:
+        get_con.execute('''SELECT EXISTS(SELECT id FROM card WHERE number = (?))''', (card_num,))
+        found = get_con.fetchone()
+        get_con.execute('''SELECT pin FROM card WHERE number = (?)''', (card_num,))
+        ch_pin = get_con.fetchone()
+        '''
+        print('found =', found)
+        print('ch_pin =', ch_pin)
+
+        temp_cur = conn.execute(''SELECT number FROM card'')
+        for row in temp_cur:
+            print('ID           =', row[0])
+            print('Card num     =', row[1])
+            print('Card pin     =', row[2])
+            print('Card balance =', row[3])
+        '''
+        if found is not None and ch_pin[0] == card_pin:
+            ch = log_in(card_num, card_pin)
+        elif not found or ch_pin != card_pin:
             print("Wrong card number or PIN")
             continue
-        elif found and ch == 2:
+        if found and ch == 2:
             print('Bye!')
             break
 
