@@ -1,94 +1,11 @@
 # Write your code here
 import random
 import sqlite3
-from luhn_algorithm import check_luhn
+from loggingin import log_in
+from User import User
 
 
-# Class user which will store all the information of a user registered in our system
-class User:
-    num = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']  # will be used to generate card number and pin
-
-    def __init__(self):
-        self.card_no = "400000"  # initializing the card number with 400000
-        self.pin = ''
-        self.balance = 0
-
-    def generate_pin(self):
-        # completing the card number
-        check_sum = 0
-        while len(self.card_no) < 15:
-            self.card_no += random.choice(User.num)
-
-        # Applying the Luhn algorithm to generate a universally valid credit card
-        for x in range(1, 16):
-            if x % 2 == 1:
-                temp = 2 * int(self.card_no[x - 1])
-                if temp > 9:
-                    temp -= 9
-                check_sum += temp
-            else:
-                check_sum += int(self.card_no[x - 1])
-
-        if check_sum % 10 == 0:
-            self.card_no += '0'
-        else:
-            self.card_no += str(10-check_sum % 10)
-
-        # generating the pin for the card
-        while len(self.pin) < 4:
-            self.pin += random.choice(User.num)
-
-
-# the user interface when if the credentials are present in the database
-def log_in(cur_user_card, cur_user_pin):
-    print("You have successfully logged in!")
-    while True:
-        user_ch = int(input("1. Balance\n2. Add income\n3. Do transfer"
-                            "\n4. Close account\n5. Log out\n0. Exit\n"))
-        get_con.execute('''SELECT balance FROM card WHERE number = (?)''',
-                        (cur_user_card,))
-        cur_user_acc_bal = get_con.fetchone()
-        if user_ch == 1:
-            print('Balance:', cur_user_acc_bal[0])
-        elif user_ch == 2:
-            to_add = int(input('Enter income:\n'))
-            get_con.execute('''UPDATE card SET balance = balance + (?) WHERE number = (?)''',
-                            (to_add, cur_user_card))
-            conn.commit()
-            print("Income was added")
-        elif user_ch == 3:
-            print("Transfer\n")
-            crd_no = input("Enter card number:\n")
-            if not check_luhn(crd_no):
-                print("Probably you made a mistake in the card number. Please try again!")
-                continue
-            get_con.execute('''SELECT balance FROM card WHERE number = (?)''', (crd_no,))
-            ex = get_con.fetchone()
-            if ex is None:
-                print("Such a card does not exist.")
-                continue
-            to_transfer = int(input("Enter how much money you want to transfer:\n"))
-            if to_transfer > cur_user_acc_bal[0]:
-                print("Not enough money!")
-                continue
-            get_con.execute('''UPDATE card SET balance = balance - (?) WHERE number = (?)''',
-                            (to_transfer, cur_user_card))
-            conn.commit()
-            get_con.execute('''UPDATE card SET balance = balance + (?) WHERE number = (?)''',
-                            (to_transfer, crd_no))
-            conn.commit()
-            print("Success!")
-        elif user_ch == 4:
-            get_con.execute('''DELETE FROM card WHERE number = (?)''', (cur_user_card,))
-            conn.commit()
-            print("The account has been closed!")
-        elif user_ch == 5:
-            print("Bye!")
-            break
-        else:
-            return 2
-
-
+# inserting newly created cards to the database
 def manage_db(insert_user):
     get_con.execute('''INSERT INTO card (number, pin)
                             VALUES (?, ?);''', (insert_user.card_no, insert_user.pin))
