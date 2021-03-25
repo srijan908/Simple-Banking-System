@@ -1,3 +1,4 @@
+# to check the validity of the entered card no during the transfer operation
 def check_luhn(data):
     n = len(data)-1
     cur = 0
@@ -20,6 +21,7 @@ def check_luhn(data):
     return False
 
 
+# to generate a universally accepted card no
 def generate(card_no):
     check_sum = 0
 

@@ -1,6 +1,7 @@
 import sqlite3
 from luhn_algorithm import check_luhn
 
+# establishing connection with the server
 conn = sqlite3.connect('card.s3db')
 conn.commit()
 
@@ -9,7 +10,7 @@ conn.commit()
 
 
 # the user interface when if the credentials are present in the database
-def log_in(cur_user_card, cur_user_pin):
+def log_in(cur_user_card):
     print("You have successfully logged in!")
     while True:
         user_ch = int(input("1. Balance\n2. Add income\n3. Do transfer"
